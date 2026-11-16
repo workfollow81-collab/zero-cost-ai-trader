@@ -6,7 +6,7 @@ import pandas as pd
 
 from config import SYMBOL, STARTING_CASH, TRADE_FRACTION, LOOP_SECONDS
 from database.db import (
-    init_db, save_price, save_trade, load_rows, get_state, save_state,
+    init_db, save_price, save_trade, save_signal, load_rows, get_state, save_state,
 )
 from analysis.indicators import add_indicators
 from strategies.basic import get_signal
@@ -34,6 +34,9 @@ def run_cycle():
     if len(frame) >= 25:
         frame = add_indicators(frame)
         signal, reason = get_signal(frame)
+
+    # احتفظ بسجل لكل قرار، بما في ذلك HOLD، لمراجعة سلوك الاستراتيجية.
+    save_signal(now, SYMBOL, signal, price, reason)
 
     if signal == "BUY" and broker.quantity == 0:
         qty = broker.buy(price, TRADE_FRACTION)
