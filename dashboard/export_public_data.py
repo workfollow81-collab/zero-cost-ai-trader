@@ -1,12 +1,15 @@
 """Export a safe, read-only snapshot for the public GitHub Pages dashboard."""
 import json
 import sqlite3
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
 from config import DB_PATH, STARTING_CASH, SYMBOL
 
-ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "docs" / "data.json"
 
 
