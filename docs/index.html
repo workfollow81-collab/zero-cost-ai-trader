@@ -10,11 +10,11 @@
     *{box-sizing:border-box}body{margin:0;background:linear-gradient(150deg,#101d30,var(--bg) 55%);color:var(--text);font-family:Tahoma,Arial,sans-serif;min-height:100vh}
     main{width:min(1100px,94%);margin:36px auto}header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px}
     h1{font-size:clamp(22px,4vw,32px);margin:0 0 8px}p{color:var(--muted);margin:0;line-height:1.7}.tag{border:1px solid #27634f;color:var(--accent);padding:8px 12px;border-radius:30px;font-size:13px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 10px 30px #0002}
-    .label{color:var(--muted);font-size:14px}.value{font-size:clamp(21px,3vw,29px);font-weight:bold;margin-top:12px;direction:ltr;text-align:right;overflow-wrap:anywhere}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 10px 30px #0002}
+    .label{color:var(--muted);font-size:14px}.value{font-size:clamp(20px,3vw,27px);font-weight:bold;margin-top:12px;direction:ltr;text-align:right;overflow-wrap:anywhere}
     section{margin-top:18px}.section-title{font-size:18px;margin:0 0 14px}.chart-wrap{height:270px;position:relative}.chart-wrap canvas{width:100%;height:100%}
     .table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:620px}th,td{text-align:right;padding:12px;border-bottom:1px solid var(--line);font-size:14px}th{color:var(--muted);font-weight:normal}
-    .buy{color:var(--accent)}.sell{color:var(--red)}.empty{padding:22px;text-align:center;color:var(--muted)}
+    .buy,.positive{color:var(--accent)}.sell,.negative{color:var(--red)}.hold{color:#c8d3e3}.empty{padding:22px;text-align:center;color:var(--muted)}
     footer{margin:22px 0;color:var(--muted);font-size:12px;line-height:1.8}.error{color:var(--red)}
     @media(max-width:560px){main{margin:22px auto}.card{padding:16px}.chart-wrap{height:220px}}
   </style>
@@ -22,7 +22,7 @@
 <body>
 <main>
   <header>
-    <div><h1>لوحة بوت التداول التجريبي</h1><p>متابعة أسعار BTC/USDT والمحفظة الافتراضية من تشغيل GitHub Actions.</p></div>
+    <div><h1>لوحة بوت التداول التجريبي</h1><p>متابعة سعر BTC/USDT والمحفظة الافتراضية وإشارات الاستراتيجية.</p></div>
     <span class="tag">تداول تجريبي فقط · لا أموال حقيقية</span>
   </header>
   <div class="grid">
@@ -31,14 +31,22 @@
     <div class="card"><div class="label">الرصيد النقدي الافتراضي</div><div class="value" id="cash">—</div></div>
     <div class="card"><div class="label">كمية BTC الافتراضية</div><div class="value" id="quantity">—</div></div>
   </div>
+  <section class="grid">
+    <div class="card"><div class="label">إجمالي الربح / الخسارة</div><div class="value" id="total-pnl">—</div></div>
+    <div class="card"><div class="label">الربح / الخسارة المحققة</div><div class="value" id="realized-pnl">—</div></div>
+    <div class="card"><div class="label">الربح / الخسارة غير المحققة</div><div class="value" id="unrealized-pnl">—</div></div>
+    <div class="card"><div class="label">الصفقات المغلقة · نسبة الفوز</div><div class="value" id="win-rate">—</div></div>
+  </section>
   <section class="card"><h2 class="section-title">حركة سعر BTC/USDT</h2><div class="chart-wrap"><canvas id="chart" aria-label="رسم حركة السعر"></canvas></div><div id="chart-empty" class="empty" hidden>لا توجد بيانات أسعار بعد.</div></section>
+  <section class="card"><h2 class="section-title">آخر إشارات الاستراتيجية</h2><div class="table-wrap"><table><thead><tr><th>الوقت</th><th>الإشارة</th><th>السعر (USDT)</th><th>السبب</th></tr></thead><tbody id="signals"></tbody></table></div><div id="signals-empty" class="empty" hidden>لا توجد إشارات مسجلة بعد.</div></section>
   <section class="card"><h2 class="section-title">آخر الصفقات الافتراضية</h2><div class="table-wrap"><table><thead><tr><th>الوقت</th><th>النوع</th><th>السعر (USDT)</th><th>الكمية (BTC)</th><th>النقد بعد الصفقة</th></tr></thead><tbody id="trades"></tbody></table></div><div id="trades-empty" class="empty" hidden>لا توجد صفقات افتراضية حتى الآن.</div></section>
-  <footer><div id="updated">جارٍ تحميل البيانات...</div><div>مصدر السعر: واجهة Binance العامة. هذه لوحة متابعة لبيانات المحاكاة فقط، ولا تنفّذ أوامر تداول حقيقية.</div><div id="load-error" class="error"></div></footer>
+  <footer><div id="updated">جارٍ تحميل البيانات...</div><div>مصدر السعر: واجهة Binance العامة. الربح والخسارة تقدير افتراضي لا يشمل الرسوم أو الانزلاق السعري، ولا يضمن نتائج مستقبلية.</div><div id="load-error" class="error"></div></footer>
 </main>
 <script>
 (() => {
   const fmt = (n, digits=2) => n == null ? "—" : Number(n).toLocaleString("en-US",{minimumFractionDigits:digits,maximumFractionDigits:digits});
   const el = id => document.getElementById(id);
+  const pnl = (id,n) => {el(id).textContent=(Number(n)>=0?"+":"")+fmt(n)+" USDT";el(id).className="value "+(Number(n)>0?"positive":Number(n)<0?"negative":"");};
   function draw(prices){
     const canvas=el("chart"), box=canvas.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
     if(!prices.length){canvas.hidden=true;el("chart-empty").hidden=false;return}
@@ -51,16 +59,24 @@
     c.strokeStyle="#66d9a8";c.lineWidth=2;c.beginPath();vals.forEach((v,i)=>i?c.lineTo(x(i),y(v)):c.moveTo(x(i),y(v)));c.stroke();
     c.fillStyle="#9aabc2";c.font="12px Arial";c.fillText(fmt(max),pad+4,16);c.fillText(fmt(min),pad+4,h-5);
   }
-  fetch("./data.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error("تعذر تحميل ملف البيانات");return r.json()}).then(d=>{
+  function cell(row,value,cls){const td=document.createElement("td");td.textContent=value;if(cls)td.className=cls;row.appendChild(td);}
+  function render(d){
     el("price").textContent=d.latest_price==null?"—":fmt(d.latest_price)+" USDT";
     el("equity").textContent=fmt(d.equity)+" USDT";el("cash").textContent=fmt(d.cash)+" USDT";
     el("quantity").textContent=fmt(d.quantity,8)+" BTC";
+    const p=d.performance||{};pnl("total-pnl",p.total_pnl||0);pnl("realized-pnl",p.realized_pnl||0);pnl("unrealized-pnl",p.unrealized_pnl||0);
+    el("win-rate").textContent=(p.closed_trades||0)+" · "+fmt(p.win_rate||0,1)+"%";
     el("updated").textContent="آخر تحديث للبيانات: "+new Date(d.updated_at).toLocaleString("ar");
+    const signalBody=el("signals");signalBody.replaceChildren();
+    (d.signals||[]).forEach(s=>{const tr=document.createElement("tr");cell(tr,new Date(s.timestamp).toLocaleString("ar"));cell(tr,s.signal==="BUY"?"شراء":s.signal==="SELL"?"بيع":"انتظار",s.signal.toLowerCase());cell(tr,fmt(s.price));cell(tr,s.reason||"—");signalBody.appendChild(tr)});
+    el("signals-empty").hidden=(d.signals||[]).length>0;
     const body=el("trades");body.replaceChildren();
-    (d.trades||[]).forEach(t=>{const tr=document.createElement("tr");const vals=[new Date(t.timestamp).toLocaleString("ar"),t.side==="BUY"?"شراء افتراضي":"بيع افتراضي",fmt(t.price),fmt(t.quantity,8),fmt(t.cash_after)];vals.forEach((v,i)=>{const td=document.createElement("td");td.textContent=v;if(i===1)td.className=t.side==="BUY"?"buy":"sell";tr.appendChild(td)});body.appendChild(tr)});
+    (d.trades||[]).forEach(t=>{const tr=document.createElement("tr");cell(tr,new Date(t.timestamp).toLocaleString("ar"));cell(tr,t.side==="BUY"?"شراء افتراضي":"بيع افتراضي",t.side.toLowerCase());cell(tr,fmt(t.price));cell(tr,fmt(t.quantity,8));cell(tr,fmt(t.cash_after));body.appendChild(tr)});
     el("trades-empty").hidden=(d.trades||[]).length>0;draw(d.prices||[]);
-  }).catch(e=>{el("updated").textContent="لم يتم تحميل البيانات";el("load-error").textContent=e.message+" — تحقق من نجاح تشغيل GitHub Actions."});
-  window.addEventListener("resize",()=>{fetch("./data.json",{cache:"no-store"}).then(r=>r.json()).then(d=>draw(d.prices||[])).catch(()=>{})});
+  }
+  let lastData=null;
+  fetch("./data.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error("تعذر تحميل ملف البيانات");return r.json()}).then(d=>{lastData=d;render(d)}).catch(e=>{el("updated").textContent="لم يتم تحميل البيانات";el("load-error").textContent=e.message+" — تحقق من نجاح تشغيل GitHub Actions."});
+  window.addEventListener("resize",()=>{if(lastData)draw(lastData.prices||[])});
 })();
 </script>
 </body>
