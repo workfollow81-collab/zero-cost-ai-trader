@@ -12,7 +12,7 @@ def fetch_current_price(symbol):
     if not market_symbol.isalnum():
         raise ValueError(f"رمز تداول غير صالح: {symbol}")
 
-    url = f"https://api.binance.com/api/v3/ticker/price?symbol={market_symbol}"
+    url = f"https://data-api.binance.vision/api/v3/ticker/price?symbol={market_symbol}"
     request = Request(
         url,
         headers={"User-Agent": "zero-cost-paper-trading-bot/1.0"},
