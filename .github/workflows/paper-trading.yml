@@ -18,7 +18,7 @@ permissions:
 jobs:
   paper-trading:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Get project files
         uses: actions/checkout@v4
@@ -59,3 +59,7 @@ jobs:
       - name: Deploy dashboard to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
