@@ -11,20 +11,20 @@ from database.db import (
 from analysis.indicators import add_indicators
 from strategies.basic import get_signal
 from exchange.paper_broker import PaperBroker
-from core.market_simulator import MarketSimulator
+from exchange.market_data import fetch_current_price
 
 
 def run_cycle():
-    """نفّذ دورة واحدة؛ مناسبة للتشغيل المجدول على GitHub Actions."""
+    """نفّذ دورة واحدة باستخدام سعر السوق العام وصفقات افتراضية فقط."""
     init_db()
-    market = MarketSimulator(start_price=get_state("last_price", 60000.0))
     broker = PaperBroker(
         STARTING_CASH,
         cash=get_state("cash", STARTING_CASH),
         quantity=get_state("quantity", 0.0),
     )
 
-    price = market.next_price()
+    # لا نستخدم سعراً عشوائياً عند تعذر الاتصال؛ نتوقف بأمان دون صفقة.
+    price = fetch_current_price(SYMBOL)
     now = datetime.now().astimezone().isoformat(timespec="seconds")
     save_price(now, SYMBOL, price)
 
@@ -45,14 +45,13 @@ def run_cycle():
         save_trade(now, SYMBOL, "SELL", price, qty, broker.cash, reason)
         print(f"بيع افتراضي: {qty:.6f} بسعر {price:.2f}")
 
-    # حفظ حالة المحفظة والسعر حتى تستمر المحاكاة بين مرات تشغيل GitHub Actions.
-    save_state("last_price", market.price)
+    # حفظ حالة المحفظة بين مرات تشغيل GitHub Actions.
     save_state("cash", broker.cash)
     save_state("quantity", broker.quantity)
 
     equity = broker.cash + broker.quantity * price
     print(
-        f"{now} | {SYMBOL}={price:,.2f} | {signal} | "
+        f"{now} | {SYMBOL}={price:,.2f} (سعر سوق عام) | {signal} | "
         f"النقد={broker.cash:,.2f} | الكمية={broker.quantity:.8f} | "
         f"قيمة المحفظة={equity:,.2f} | {reason}"
     )
@@ -67,7 +66,7 @@ def main():
     args = parser.parse_args()
 
     print("ZERO COST AI TRADER | PAPER MODE")
-    print("محاكاة أسعار وصفقات افتراضية فقط — لا اتصال بمنصة ولا تداول حقيقي")
+    print("سعر سوق عام + صفقات افتراضية فقط — لا اتصال بحساب تداول ولا تداول حقيقي")
     if args.once:
         run_cycle()
         return
