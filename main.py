@@ -6,7 +6,7 @@ import pandas as pd
 
 from config import SYMBOL, STARTING_CASH, TRADE_FRACTION, LOOP_SECONDS
 from database.db import (
-    init_db, save_price, save_trade, load_rows, get_state, save_state,
+    init_db, save_price, save_signal, save_trade, load_rows, get_state, save_state,
 )
 from analysis.indicators import add_indicators
 from strategies.basic import get_signal
@@ -35,15 +35,26 @@ def run_cycle():
         frame = add_indicators(frame)
         signal, reason = get_signal(frame)
 
+    # احفظ كل إشارة، بما فيها HOLD، لأغراض قياس الأداء.
+    save_signal(now, SYMBOL, signal, price, reason)
+
     if signal == "BUY" and broker.quantity == 0:
+        previous_cash = broker.cash
         qty = broker.buy(price, TRADE_FRACTION)
         if qty:
+            invested = previous_cash - broker.cash
+            save_state("position_cost", invested)
             save_trade(now, SYMBOL, "BUY", price, qty, broker.cash, reason)
             print(f"شراء افتراضي: {qty:.6f} بسعر {price:.2f}")
     elif signal == "SELL" and broker.quantity > 0:
         qty = broker.sell_all(price)
-        save_trade(now, SYMBOL, "SELL", price, qty, broker.cash, reason)
-        print(f"بيع افتراضي: {qty:.6f} بسعر {price:.2f}")
+        cost_basis = get_state("position_cost", 0.0)
+        realized_pnl = qty * price - cost_basis
+        cumulative_pnl = get_state("realized_pnl", 0.0) + realized_pnl
+        save_state("realized_pnl", cumulative_pnl)
+        save_state("position_cost", 0.0)
+        save_trade(now, SYMBOL, "SELL", price, qty, broker.cash, reason, pnl=realized_pnl)
+        print(f"بيع افتراضي: {qty:.6f} بسعر {price:.2f} | ربح/خسارة محققة: {realized_pnl:.2f} USDT")
 
     # حفظ حالة المحفظة بين مرات تشغيل GitHub Actions.
     save_state("cash", broker.cash)
