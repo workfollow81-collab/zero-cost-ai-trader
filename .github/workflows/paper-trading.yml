@@ -21,6 +21,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 15
     env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
       MT5_LOGIN: ${{ secrets.MT5_LOGIN }}
       MT5_PASSWORD: ${{ secrets.MT5_PASSWORD }}
       MT5_SERVER: ${{ secrets.MT5_SERVER }}
