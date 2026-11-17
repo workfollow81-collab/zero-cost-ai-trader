@@ -13,21 +13,46 @@ from strategies.basic import get_signal
 from exchange.market_data import fetch_current_price
 
 
-def run_cycle():
-    """Fetch all configured markets and paper-trade them using one shared cash balance."""
-    init_db()
-    cash = get_state("cash", STARTING_CASH)
-    # Migrate the previous single-BTC paper position without discarding it.
-    if get_state("migration_multi_asset_v1", 0.0) == 0.0:
-        legacy_qty = get_state("quantity", 0.0)
-        if legacy_qty > 0:
-            save_state("quantity:BTCUSDT", legacy_qty)
-            save_state("position_cost:BTCUSDT", get_state("position_cost", 0.0))
-        save_state("quantity", 0.0)
-        save_state("migration_multi_asset_v1", 1.0)
+def _migrate_legacy_btc(cash, now):
+    """Close the old BTC-only simulated position; BTC is not an active market."""
+    if get_state("migration_gold_fx_v2", 0.0) != 0.0:
+        return cash
+    legacy_qty = get_state("quantity", 0.0)
+    if legacy_qty > 0:
+        last_rows = load_rows("prices", 1, symbol="BTC/USDT")
+        if last_rows:
+            last_price = float(last_rows[0]["price"])
+            cost_basis = get_state("position_cost", 0.0)
+            proceeds = legacy_qty * last_price
+            pnl = proceeds - cost_basis
+            cash += proceeds
+            save_trade(
+                now, "BTC/USDT", "SELL", last_price, legacy_qty, cash,
+                "إغلاق افتراضي للمركز القديم عند التحويل إلى الذهب والفوركس",
+                pnl=pnl,
+            )
+            save_state("realized_pnl:LEGACY_BTC", pnl)
+            print(f"Legacy BTC paper position closed at last stored quote; PnL={pnl:.2f}")
+        else:
+            # No price is available to value the old simulated position safely.
+            # Keep a visible archived marker instead of inventing a liquidation price.
+            save_state("archived_legacy_btc_quantity", legacy_qty)
+            save_state("archived_legacy_btc_cost", get_state("position_cost", 0.0))
+            print("Legacy BTC position archived: no stored quote available for safe paper close.")
+    save_state("quantity", 0.0)
+    save_state("position_cost", 0.0)
+    save_state("migration_gold_fx_v2", 1.0)
+    return cash
 
+
+def run_cycle():
+    """Fetch configured gold/forex markets and paper-trade them with shared cash."""
+    init_db()
     now = datetime.now().astimezone().isoformat(timespec="seconds")
+    cash = get_state("cash", STARTING_CASH)
+    cash = _migrate_legacy_btc(cash, now)
     latest_prices = {}
+
     for symbol in SYMBOLS:
         try:
             price = fetch_current_price(symbol)
@@ -65,32 +90,29 @@ def run_cycle():
                 print(f"{symbol}: PAPER SELL {quantity:.8f} @ {price:.6f} | PnL {pnl:.2f}")
             print(f"{symbol} ({MARKETS[symbol]['name']}): {price:.6f} | {signal} | {reason}")
         except Exception as exc:
-            # One unavailable provider must not prevent other markets from running.
+            # A provider outage for one pair must not stop the remaining markets.
             print(f"{symbol}: SKIPPED — {exc}")
 
-    for symbol, price in latest_prices.items():
-        # Current position state is already persisted per market.
-        pass
     equity = cash
     for symbol in SYMBOLS:
-        qty = get_state(f"quantity:{symbol}", 0.0)
+        quantity = get_state(f"quantity:{symbol}", 0.0)
         mark = latest_prices.get(symbol)
         if mark is None:
             rows = load_rows("prices", 1, symbol=symbol)
-            mark = rows[0]["price"] if rows else 0.0
-        equity += qty * mark
+            mark = float(rows[0]["price"]) if rows else 0.0
+        equity += quantity * mark
     save_state("cash", cash)
     save_state("equity", equity)
-    print(f"{now} | CASH={cash:.2f} | PORTFOLIO EQUITY={equity:.2f} | PAPER ONLY")
+    print(f"{now} | CASH={cash:.2f} | PORTFOLIO EQUITY={equity:.2f} | GOLD + FOREX PAPER ONLY")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Multi-asset paper trading simulator")
+    parser = argparse.ArgumentParser(description="Gold and forex paper trading simulator")
     parser.add_argument("--once", action="store_true", help="Run one cycle and exit")
     args = parser.parse_args()
-    print("ZERO COST AI TRADER | MULTI-ASSET PAPER MODE")
+    print("ZERO COST AI TRADER | GOLD + FOREX PAPER MODE")
     print("Markets: " + ", ".join(SYMBOLS))
-    print("No broker connection, no real orders, no real funds.")
+    print("No Bitcoin strategy, no broker connection, no real orders or funds.")
     if args.once:
         run_cycle()
         return
