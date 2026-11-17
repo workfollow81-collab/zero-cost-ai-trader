@@ -47,6 +47,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-paper-state-
 
+      - name: Validate MT5 bridge syntax
+        run: python -m py_compile mt5_demo.py
+
       - name: Install MetaTrader 5 terminal (demo mode only)
         if: ${{ env.MT5_DEMO_TRADING_ENABLED == 'true' }}
         shell: pwsh
