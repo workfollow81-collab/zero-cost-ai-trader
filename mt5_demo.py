@@ -68,7 +68,7 @@ def choose_filling(info):
 
 
 def normalized_volume(info):
-    requested = float(os.getenv("MT5_VOLUME", str(DEFAULT_VOLUME)))
+    requested = float(os.getenv("MT5_VOLUME", "").strip() or DEFAULT_VOLUME)
     if not math.isfinite(requested) or requested <= 0:
         raise RuntimeError("MT5_VOLUME must be a positive number.")
 
@@ -157,7 +157,7 @@ def run():
         if not bool(terminal.trade_allowed) or not bool(account.trade_allowed):
             raise RuntimeError("MT5 terminal/account trading permission is disabled.")
 
-        symbol = os.getenv("MT5_SYMBOL", DEFAULT_SYMBOL).strip()
+        symbol = os.getenv("MT5_SYMBOL", "").strip() or DEFAULT_SYMBOL
         if not symbol or not mt5.symbol_select(symbol, True):
             raise RuntimeError(f"Could not select MT5 symbol '{symbol}': {mt5.last_error()}")
 
@@ -167,7 +167,7 @@ def run():
             raise RuntimeError(f"Could not read symbol details or quote for {symbol}.")
 
         spread_points = (float(tick.ask) - float(tick.bid)) / float(info.point)
-        max_spread = float(os.getenv("MT5_MAX_SPREAD_POINTS", str(DEFAULT_MAX_SPREAD_POINTS)))
+        max_spread = float(os.getenv("MT5_MAX_SPREAD_POINTS", "").strip() or DEFAULT_MAX_SPREAD_POINTS)
         if spread_points > max_spread:
             print(f"Spread guard: {spread_points:.1f} points exceeds {max_spread:.1f}; no order.")
             return 0
