@@ -168,9 +168,8 @@ def run():
 
         spread_points = (float(tick.ask) - float(tick.bid)) / float(info.point)
         max_spread = float(os.getenv("MT5_MAX_SPREAD_POINTS", "").strip() or DEFAULT_MAX_SPREAD_POINTS)
-        if spread_points > max_spread:
-            print(f"Spread guard: {spread_points:.1f} points exceeds {max_spread:.1f}; no order.")
-            return 0
+        if int(info.trade_mode) == int(mt5.SYMBOL_TRADE_MODE_DISABLED):
+            raise RuntimeError(f"Trading is disabled for symbol {symbol}.")
 
         rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M5, 1, 150)
         if rates is None or len(rates) < 30:
@@ -202,6 +201,9 @@ def run():
             last_action_bar = load_last_bar()
             if last_action_bar == bar_time:
                 print("Duplicate-bar guard: this candle was already processed; no new order.")
+                return 0
+            if spread_points > max_spread:
+                print(f"Spread guard: {spread_points:.1f} points exceeds {max_spread:.1f}; no new position.")
                 return 0
 
             pnl_today = daily_realized_pnl()
