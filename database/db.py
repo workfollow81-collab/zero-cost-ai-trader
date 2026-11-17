@@ -13,7 +13,6 @@ def init_db():
         con.execute("CREATE TABLE IF NOT EXISTS trades (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT NOT NULL, symbol TEXT NOT NULL, side TEXT NOT NULL, price REAL NOT NULL, quantity REAL NOT NULL, cash_after REAL NOT NULL, note TEXT, pnl REAL)")
         con.execute("CREATE TABLE IF NOT EXISTS bot_state (key TEXT PRIMARY KEY, value REAL NOT NULL)")
         con.execute("CREATE TABLE IF NOT EXISTS signals (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT NOT NULL, symbol TEXT NOT NULL, signal TEXT NOT NULL, price REAL NOT NULL, reason TEXT NOT NULL)")
-        # Upgrade databases created by earlier versions without deleting existing records.
         columns = {row["name"] for row in con.execute("PRAGMA table_info(trades)")}
         if "pnl" not in columns:
             con.execute("ALTER TABLE trades ADD COLUMN pnl REAL")
@@ -33,11 +32,15 @@ def save_trade(timestamp, symbol, side, price, quantity, cash_after, note="", pn
                     (timestamp, symbol, side, float(price), float(quantity), float(cash_after), note,
                      None if pnl is None else float(pnl)))
 
-def load_rows(table, limit=500):
+def load_rows(table, limit=500, symbol=None):
     if table not in {"prices", "trades", "signals"}:
         raise ValueError("Unsupported table")
     with connect() as con:
-        rows = con.execute(f"SELECT * FROM {table} ORDER BY id DESC LIMIT ?", (int(limit),)).fetchall()
+        if symbol is None:
+            rows = con.execute(f"SELECT * FROM {table} ORDER BY id DESC LIMIT ?", (int(limit),)).fetchall()
+        else:
+            rows = con.execute(f"SELECT * FROM {table} WHERE symbol = ? ORDER BY id DESC LIMIT ?",
+                               (symbol, int(limit))).fetchall()
         return [dict(row) for row in rows]
 
 def get_state(key, default):

@@ -22,21 +22,21 @@
 <body>
 <main>
   <header>
-    <div><h1>لوحة بوت التداول التجريبي</h1><p>متابعة أسعار BTC/USDT والمحفظة الافتراضية من تشغيل GitHub Actions.</p></div>
+    <div><h1>لوحة بوت التداول التجريبي</h1><p>متابعة أسعار EUR/USD والمحفظة الافتراضية من تشغيل GitHub Actions.</p></div>
     <span class="tag">تداول تجريبي فقط · لا أموال حقيقية</span>
   </header>
   <div class="grid">
-    <div class="card"><div class="label">آخر سعر سوق معلن · BTC/USDT</div><div class="value" id="price">—</div></div>
+    <div class="card"><div class="label">آخر سعر سوق معلن · EUR/USD</div><div class="value" id="price">—</div></div>
     <div class="card"><div class="label">قيمة المحفظة الافتراضية</div><div class="value" id="equity">—</div></div>
     <div class="card"><div class="label">الرصيد النقدي الافتراضي</div><div class="value" id="cash">—</div></div>
-    <div class="card"><div class="label">كمية BTC الافتراضية</div><div class="value" id="quantity">—</div></div>
+    <div class="card"><div class="label">كمية EUR الافتراضية</div><div class="value" id="quantity">—</div></div>
     <div class="card"><div class="label">الربح/الخسارة المحققة</div><div class="value" id="realized-pnl">—</div></div>
     <div class="card"><div class="label">الصفقات المغلقة · نسبة الفوز</div><div class="value" id="win-rate">—</div></div>
     <div class="card"><div class="label">عدد الإشارات المسجلة</div><div class="value" id="signal-count">—</div></div>
   </div>
-  <section class="card"><h2 class="section-title">حركة سعر BTC/USDT</h2><div class="chart-wrap"><canvas id="chart" aria-label="رسم حركة السعر"></canvas></div><div id="chart-empty" class="empty" hidden>لا توجد بيانات أسعار بعد.</div></section>
-  <section class="card"><h2 class="section-title">آخر إشارات الاستراتيجية</h2><div class="table-wrap"><table><thead><tr><th>الوقت</th><th>الإشارة</th><th>السعر (USDT)</th><th>السبب</th></tr></thead><tbody id="signals"></tbody></table></div><div id="signals-empty" class="empty" hidden>لا توجد إشارات مسجلة بعد.</div></section>
-  <section class="card"><h2 class="section-title">آخر الصفقات الافتراضية</h2><div class="table-wrap"><table><thead><tr><th>الوقت</th><th>النوع</th><th>السعر (USDT)</th><th>الكمية (BTC)</th><th>النقد بعد الصفقة</th><th>الربح/الخسارة</th></tr></thead><tbody id="trades"></tbody></table></div><div id="trades-empty" class="empty" hidden>لا توجد صفقات افتراضية حتى الآن.</div></section>
+  <section class="card"><h2 class="section-title">حركة سعر EUR/USD</h2><div class="chart-wrap"><canvas id="chart" aria-label="رسم حركة السعر"></canvas></div><div id="chart-empty" class="empty" hidden>لا توجد بيانات أسعار بعد.</div></section>
+  <section class="card"><h2 class="section-title">آخر إشارات الاستراتيجية</h2><div class="table-wrap"><table><thead><tr><th>الوقت</th><th>الإشارة</th><th>السعر (USD)</th><th>السبب</th></tr></thead><tbody id="signals"></tbody></table></div><div id="signals-empty" class="empty" hidden>لا توجد إشارات مسجلة بعد.</div></section>
+  <section class="card"><h2 class="section-title">آخر الصفقات الافتراضية</h2><div class="table-wrap"><table><thead><tr><th>الوقت</th><th>النوع</th><th>السعر (USD)</th><th>الكمية (EUR)</th><th>النقد بعد الصفقة</th><th>الربح/الخسارة</th></tr></thead><tbody id="trades"></tbody></table></div><div id="trades-empty" class="empty" hidden>لا توجد صفقات افتراضية حتى الآن.</div></section>
   <footer><div id="updated">جارٍ تحميل البيانات...</div><div>مصدر السعر: واجهة Binance العامة. هذه لوحة متابعة لبيانات المحاكاة فقط، ولا تنفّذ أوامر تداول حقيقية.</div><div id="load-error" class="error"></div></footer>
 </main>
 <script>
@@ -56,15 +56,15 @@
     c.fillStyle="#9aabc2";c.font="12px Arial";c.fillText(fmt(max),pad+4,16);c.fillText(fmt(min),pad+4,h-5);
   }
   fetch("./data.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error("تعذر تحميل ملف البيانات");return r.json()}).then(d=>{
-    el("price").textContent=d.latest_price==null?"—":fmt(d.latest_price)+" USDT";
-    el("equity").textContent=fmt(d.equity)+" USDT";el("cash").textContent=fmt(d.cash)+" USDT";
-    el("quantity").textContent=fmt(d.quantity,8)+" BTC";
-    el("realized-pnl").textContent=fmt(d.realized_pnl)+" USDT";
+    el("price").textContent=d.latest_price==null?"—":fmt(d.latest_price)+" USD";
+    el("equity").textContent=fmt(d.equity)+" USD";el("cash").textContent=fmt(d.cash)+" USD";
+    el("quantity").textContent=fmt(d.quantity,8)+" EUR";
+    el("realized-pnl").textContent=fmt(d.realized_pnl)+" USD";
     el("win-rate").textContent=d.win_rate==null?"لا توجد صفقات مغلقة":fmt(d.win_rate,1)+"% ("+d.closed_trades+")";
     el("signal-count").textContent=String((d.signals||[]).length);
     el("updated").textContent="آخر تحديث للبيانات: "+new Date(d.updated_at).toLocaleString("ar");
     const body=el("trades");body.replaceChildren();
-    (d.trades||[]).forEach(t=>{const tr=document.createElement("tr");const vals=[new Date(t.timestamp).toLocaleString("ar"),t.side==="BUY"?"شراء افتراضي":"بيع افتراضي",fmt(t.price),fmt(t.quantity,8),fmt(t.cash_after),t.pnl==null?"—":fmt(t.pnl)+" USDT"];vals.forEach((v,i)=>{const td=document.createElement("td");td.textContent=v;if(i===1)td.className=t.side==="BUY"?"buy":"sell";tr.appendChild(td)});body.appendChild(tr)});
+    (d.trades||[]).forEach(t=>{const tr=document.createElement("tr");const vals=[new Date(t.timestamp).toLocaleString("ar"),t.side==="BUY"?"شراء افتراضي":"بيع افتراضي",fmt(t.price),fmt(t.quantity,8),fmt(t.cash_after),t.pnl==null?"—":fmt(t.pnl)+" USD"];vals.forEach((v,i)=>{const td=document.createElement("td");td.textContent=v;if(i===1)td.className=t.side==="BUY"?"buy":"sell";tr.appendChild(td)});body.appendChild(tr)});
     el("trades-empty").hidden=(d.trades||[]).length>0;
     const signalBody=el("signals");signalBody.replaceChildren();
     (d.signals||[]).forEach(s=>{const tr=document.createElement("tr");const vals=[new Date(s.timestamp).toLocaleString("ar"),s.signal,fmt(s.price),s.reason];vals.forEach((v,i)=>{const td=document.createElement("td");td.textContent=v;if(i===1)td.className=s.signal==="BUY"?"buy":s.signal==="SELL"?"sell":"";tr.appendChild(td)});signalBody.appendChild(tr)});

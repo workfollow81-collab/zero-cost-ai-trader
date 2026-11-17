@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT))
 from config import DB_PATH, STARTING_CASH, SYMBOL
 
 OUTPUT = ROOT / "docs" / "data.json"
+STATE_PREFIX = SYMBOL.replace("/", "")
 
 
 def main():
@@ -24,7 +25,8 @@ def main():
         with sqlite3.connect(DB_PATH) as con:
             con.row_factory = sqlite3.Row
             price_rows = con.execute(
-                "SELECT timestamp, price FROM prices ORDER BY id DESC LIMIT 200"
+                "SELECT timestamp, price FROM prices WHERE symbol = ? ORDER BY id DESC LIMIT 200",
+                (SYMBOL,),
             ).fetchall()
             prices = [{"timestamp": row["timestamp"], "price": float(row["price"])}
                       for row in reversed(price_rows)]
@@ -32,7 +34,8 @@ def main():
             pnl_select = "pnl" if "pnl" in trade_columns else "NULL AS pnl"
             trade_rows = con.execute(
                 f"SELECT timestamp, side, price, quantity, cash_after, note, {pnl_select} "
-                "FROM trades ORDER BY id DESC LIMIT 100"
+                "FROM trades WHERE symbol = ? ORDER BY id DESC LIMIT 100",
+                (SYMBOL,),
             ).fetchall()
             trades = [{
                 "timestamp": row["timestamp"], "side": row["side"],
@@ -42,19 +45,17 @@ def main():
             } for row in trade_rows]
             state = {row["key"]: float(row["value"])
                      for row in con.execute("SELECT key, value FROM bot_state")}
-            cash = state.get("cash", cash)
-            quantity = state.get("quantity", quantity)
-            realized_pnl = state.get("realized_pnl", 0.0)
-            tables = {row["name"] for row in con.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'")}
-            if "signals" in tables:
-                signal_rows = con.execute(
-                    "SELECT timestamp, signal, price, reason FROM signals ORDER BY id DESC LIMIT 30"
-                ).fetchall()
-                signals = [{
-                    "timestamp": row["timestamp"], "signal": row["signal"],
-                    "price": float(row["price"]), "reason": row["reason"] or "",
-                } for row in signal_rows]
+            cash = state.get(f"{STATE_PREFIX}_cash", cash)
+            quantity = state.get(f"{STATE_PREFIX}_quantity", quantity)
+            realized_pnl = state.get(f"{STATE_PREFIX}_realized_pnl", 0.0)
+            signal_rows = con.execute(
+                "SELECT timestamp, signal, price, reason FROM signals WHERE symbol = ? ORDER BY id DESC LIMIT 30",
+                (SYMBOL,),
+            ).fetchall()
+            signals = [{
+                "timestamp": row["timestamp"], "signal": row["signal"],
+                "price": float(row["price"]), "reason": row["reason"] or "",
+            } for row in signal_rows]
 
     if prices:
         latest_price = prices[-1]["price"]
@@ -74,7 +75,7 @@ def main():
         "signals": signals,
     }
     OUTPUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"Dashboard data exported: {len(prices)} prices, {len(signals)} signals, {len(trades)} paper trades.")
+    print(f"Dashboard data exported for {SYMBOL}: {len(prices)} prices, {len(signals)} signals, {len(trades)} paper trades.")
 
 
 if __name__ == "__main__":
