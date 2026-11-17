@@ -1,77 +1,49 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#101827">
-  <title>لوحة بوت التداول التجريبي</title>
-  <style>
-    :root{color-scheme:dark;--bg:#0b1220;--panel:#141f31;--line:#26354b;--muted:#9aabc2;--text:#eef4ff;--accent:#66d9a8;--red:#ff8e8e}
-    *{box-sizing:border-box}body{margin:0;background:linear-gradient(150deg,#101d30,var(--bg) 55%);color:var(--text);font-family:Tahoma,Arial,sans-serif;min-height:100vh}
-    main{width:min(1100px,94%);margin:36px auto}header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px}
-    h1{font-size:clamp(22px,4vw,32px);margin:0 0 8px}p{color:var(--muted);margin:0;line-height:1.7}.tag{border:1px solid #27634f;color:var(--accent);padding:8px 12px;border-radius:30px;font-size:13px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 10px 30px #0002}
-    .label{color:var(--muted);font-size:14px}.value{font-size:clamp(21px,3vw,29px);font-weight:bold;margin-top:12px;direction:ltr;text-align:right;overflow-wrap:anywhere}
-    section{margin-top:18px}.section-title{font-size:18px;margin:0 0 14px}.chart-wrap{height:270px;position:relative}.chart-wrap canvas{width:100%;height:100%}
-    .table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:620px}th,td{text-align:right;padding:12px;border-bottom:1px solid var(--line);font-size:14px}th{color:var(--muted);font-weight:normal}
-    .buy{color:var(--accent)}.sell{color:var(--red)}.empty{padding:22px;text-align:center;color:var(--muted)}
-    footer{margin:22px 0;color:var(--muted);font-size:12px;line-height:1.8}.error{color:var(--red)}
-    @media(max-width:560px){main{margin:22px auto}.card{padding:16px}.chart-wrap{height:220px}}
-  </style>
-</head>
-<body>
-<main>
-  <header>
-    <div><h1>لوحة بوت التداول التجريبي</h1><p>متابعة أسعار BTC/USDT والمحفظة الافتراضية من تشغيل GitHub Actions.</p></div>
-    <span class="tag">تداول تجريبي فقط · لا أموال حقيقية</span>
-  </header>
-  <div class="grid">
-    <div class="card"><div class="label">آخر سعر سوق معلن · BTC/USDT</div><div class="value" id="price">—</div></div>
-    <div class="card"><div class="label">قيمة المحفظة الافتراضية</div><div class="value" id="equity">—</div></div>
-    <div class="card"><div class="label">الرصيد النقدي الافتراضي</div><div class="value" id="cash">—</div></div>
-    <div class="card"><div class="label">كمية BTC الافتراضية</div><div class="value" id="quantity">—</div></div>
-    <div class="card"><div class="label">الربح/الخسارة المحققة</div><div class="value" id="realized-pnl">—</div></div>
-    <div class="card"><div class="label">الصفقات المغلقة · نسبة الفوز</div><div class="value" id="win-rate">—</div></div>
-    <div class="card"><div class="label">عدد الإشارات المسجلة</div><div class="value" id="signal-count">—</div></div>
-  </div>
-  <section class="card"><h2 class="section-title">حركة سعر BTC/USDT</h2><div class="chart-wrap"><canvas id="chart" aria-label="رسم حركة السعر"></canvas></div><div id="chart-empty" class="empty" hidden>لا توجد بيانات أسعار بعد.</div></section>
-  <section class="card"><h2 class="section-title">آخر إشارات الاستراتيجية</h2><div class="table-wrap"><table><thead><tr><th>الوقت</th><th>الإشارة</th><th>السعر (USDT)</th><th>السبب</th></tr></thead><tbody id="signals"></tbody></table></div><div id="signals-empty" class="empty" hidden>لا توجد إشارات مسجلة بعد.</div></section>
-  <section class="card"><h2 class="section-title">آخر الصفقات الافتراضية</h2><div class="table-wrap"><table><thead><tr><th>الوقت</th><th>النوع</th><th>السعر (USDT)</th><th>الكمية (BTC)</th><th>النقد بعد الصفقة</th><th>الربح/الخسارة</th></tr></thead><tbody id="trades"></tbody></table></div><div id="trades-empty" class="empty" hidden>لا توجد صفقات افتراضية حتى الآن.</div></section>
-  <footer><div id="updated">جارٍ تحميل البيانات...</div><div>مصدر السعر: واجهة Binance العامة. هذه لوحة متابعة لبيانات المحاكاة فقط، ولا تنفّذ أوامر تداول حقيقية.</div><div id="load-error" class="error"></div></footer>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101827"><title>لوحة التداول متعددة الأسواق</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#141f31;--line:#26354b;--muted:#9aabc2;--text:#eef4ff;--accent:#66d9a8;--red:#ff8e8e}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(150deg,#101d30,var(--bg) 55%);color:var(--text);font-family:Tahoma,Arial,sans-serif;min-height:100vh}
+main{width:min(1100px,94%);margin:30px auto}header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+h1{font-size:clamp(22px,4vw,32px);margin:0 0 8px}p,.muted{color:var(--muted);line-height:1.7;margin:0}.tag{border:1px solid #27634f;color:var(--accent);padding:8px 12px;border-radius:30px;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:18px;margin-top:14px}
+.label{color:var(--muted);font-size:13px}.value{font-size:clamp(20px,3vw,28px);font-weight:bold;margin-top:10px;direction:ltr;text-align:right;overflow-wrap:anywhere}
+select{background:#0b1220;color:var(--text);border:1px solid var(--line);padding:10px;border-radius:9px;min-width:230px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.chart-wrap{height:260px;margin-top:12px}.chart-wrap canvas{width:100%;height:100%}
+.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:650px}th,td{text-align:right;padding:11px;border-bottom:1px solid var(--line);font-size:13px}th{color:var(--muted);font-weight:normal}
+.buy{color:var(--accent)}.sell{color:var(--red)}.empty{padding:20px;text-align:center;color:var(--muted)}footer{margin:20px 0;color:var(--muted);font-size:12px;line-height:1.8}
+@media(max-width:560px){main{margin:20px auto}.card{padding:14px}.chart-wrap{height:210px}}
+</style></head>
+<body><main>
+<header><div><h1>بوت التداول الذكي متعدد الأسواق</h1><p>الذهب · الفوركس · العملات الرقمية — بيانات وأسعار وصفقات افتراضية</p></div><span class="tag">Paper Trading فقط · لا أموال حقيقية</span></header>
+<div class="grid">
+<div class="card"><div class="label">قيمة المحفظة الافتراضية</div><div class="value" id="equity">—</div></div>
+<div class="card"><div class="label">الرصيد النقدي المتاح</div><div class="value" id="cash">—</div></div>
+<div class="card"><div class="label">الربح/الخسارة المحققة</div><div class="value" id="pnl">—</div></div>
+<div class="card"><div class="label">الأسواق المفعّلة</div><div class="value" id="market-count">—</div></div>
+</div>
+<section class="card"><div class="toolbar"><h2>تفاصيل السوق</h2><select id="market"></select></div>
+<div class="grid">
+<div><div class="label">آخر سعر مسجل</div><div class="value" id="price">—</div></div>
+<div><div class="label">الكمية الافتراضية المفتوحة</div><div class="value" id="quantity">—</div></div>
+<div><div class="label">نسبة نجاح الصفقات المغلقة</div><div class="value" id="win-rate">—</div></div>
+<div><div class="label">مزود السعر</div><div class="value" id="provider">—</div></div>
+</div><div class="chart-wrap"><canvas id="chart"></canvas></div><div id="chart-empty" class="empty" hidden>لا توجد بيانات أسعار لهذا السوق بعد.</div>
+</section>
+<section class="card"><h2>آخر الإشارات</h2><div class="table-wrap"><table><thead><tr><th>الوقت</th><th>السوق</th><th>الإشارة</th><th>السعر</th><th>السبب</th></tr></thead><tbody id="signals"></tbody></table></div></section>
+<section class="card"><h2>آخر الصفقات الافتراضية</h2><div class="table-wrap"><table><thead><tr><th>الوقت</th><th>السوق</th><th>النوع</th><th>السعر</th><th>الكمية</th><th>الربح/الخسارة</th></tr></thead><tbody id="trades"></tbody></table></div></section>
+<footer><div id="updated">جارٍ تحميل البيانات...</div><div>الذهب ممثل بعقد COMEX الآجل GC=F وليس سعر CFD فوري. أسعار الفوركس عبر Yahoo Finance وقد تكون متأخرة/استرشادية. أسعار العملات الرقمية عبر Binance العام. لا يوجد اتصال بوسيط ولا أوامر حقيقية.</div><div id="error"></div></footer>
 </main>
 <script>
-(() => {
-  const fmt = (n, digits=2) => n == null ? "—" : Number(n).toLocaleString("en-US",{minimumFractionDigits:digits,maximumFractionDigits:digits});
-  const el = id => document.getElementById(id);
-  function draw(prices){
-    const canvas=el("chart"), box=canvas.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
-    if(!prices.length){canvas.hidden=true;el("chart-empty").hidden=false;return}
-    canvas.hidden=false;el("chart-empty").hidden=true;canvas.width=Math.max(1,box.width*dpr);canvas.height=Math.max(1,box.height*dpr);
-    const c=canvas.getContext("2d");c.scale(dpr,dpr);const w=box.width,h=box.height,pad=24;
-    const vals=prices.map(x=>Number(x.price)).filter(Number.isFinite);if(!vals.length)return;
-    let min=Math.min(...vals),max=Math.max(...vals);if(min===max){min*=.999;max*=1.001}
-    const x=i=>pad+(w-2*pad)*(i/Math.max(1,vals.length-1)),y=v=>h-pad-(h-2*pad)*(v-min)/(max-min);
-    c.strokeStyle="#34445b";c.lineWidth=1;c.beginPath();c.moveTo(pad,pad);c.lineTo(pad,h-pad);c.lineTo(w-pad,h-pad);c.stroke();
-    c.strokeStyle="#66d9a8";c.lineWidth=2;c.beginPath();vals.forEach((v,i)=>i?c.lineTo(x(i),y(v)):c.moveTo(x(i),y(v)));c.stroke();
-    c.fillStyle="#9aabc2";c.font="12px Arial";c.fillText(fmt(max),pad+4,16);c.fillText(fmt(min),pad+4,h-5);
-  }
-  fetch("./data.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error("تعذر تحميل ملف البيانات");return r.json()}).then(d=>{
-    el("price").textContent=d.latest_price==null?"—":fmt(d.latest_price)+" USDT";
-    el("equity").textContent=fmt(d.equity)+" USDT";el("cash").textContent=fmt(d.cash)+" USDT";
-    el("quantity").textContent=fmt(d.quantity,8)+" BTC";
-    el("realized-pnl").textContent=fmt(d.realized_pnl)+" USDT";
-    el("win-rate").textContent=d.win_rate==null?"لا توجد صفقات مغلقة":fmt(d.win_rate,1)+"% ("+d.closed_trades+")";
-    el("signal-count").textContent=String((d.signals||[]).length);
-    el("updated").textContent="آخر تحديث للبيانات: "+new Date(d.updated_at).toLocaleString("ar");
-    const body=el("trades");body.replaceChildren();
-    (d.trades||[]).forEach(t=>{const tr=document.createElement("tr");const vals=[new Date(t.timestamp).toLocaleString("ar"),t.side==="BUY"?"شراء افتراضي":"بيع افتراضي",fmt(t.price),fmt(t.quantity,8),fmt(t.cash_after),t.pnl==null?"—":fmt(t.pnl)+" USDT"];vals.forEach((v,i)=>{const td=document.createElement("td");td.textContent=v;if(i===1)td.className=t.side==="BUY"?"buy":"sell";tr.appendChild(td)});body.appendChild(tr)});
-    el("trades-empty").hidden=(d.trades||[]).length>0;
-    const signalBody=el("signals");signalBody.replaceChildren();
-    (d.signals||[]).forEach(s=>{const tr=document.createElement("tr");const vals=[new Date(s.timestamp).toLocaleString("ar"),s.signal,fmt(s.price),s.reason];vals.forEach((v,i)=>{const td=document.createElement("td");td.textContent=v;if(i===1)td.className=s.signal==="BUY"?"buy":s.signal==="SELL"?"sell":"";tr.appendChild(td)});signalBody.appendChild(tr)});
-    el("signals-empty").hidden=(d.signals||[]).length>0;draw(d.prices||[]);
-  }).catch(e=>{el("updated").textContent="لم يتم تحميل البيانات";el("load-error").textContent=e.message+" — تحقق من نجاح تشغيل GitHub Actions."});
-  window.addEventListener("resize",()=>{fetch("./data.json",{cache:"no-store"}).then(r=>r.json()).then(d=>draw(d.prices||[])).catch(()=>{})});
+(()=>{const el=id=>document.getElementById(id),fmt=(v,d=2)=>v==null?"—":Number(v).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+let data=null;
+function draw(prices){const canvas=el("chart"),box=canvas.getBoundingClientRect(),dpr=window.devicePixelRatio||1;if(!prices.length){canvas.hidden=true;el("chart-empty").hidden=false;return}canvas.hidden=false;el("chart-empty").hidden=true;canvas.width=Math.max(1,box.width*dpr);canvas.height=Math.max(1,box.height*dpr);const c=canvas.getContext("2d");c.scale(dpr,dpr);const w=box.width,h=box.height,p=24,vals=prices.map(x=>Number(x.price)).filter(Number.isFinite);if(!vals.length)return;let min=Math.min(...vals),max=Math.max(...vals);if(min===max){min*=.999;max*=1.001}const x=i=>p+(w-2*p)*i/Math.max(1,vals.length-1),y=v=>h-p-(h-2*p)*(v-min)/(max-min);c.strokeStyle="#34445b";c.beginPath();c.moveTo(p,p);c.lineTo(p,h-p);c.lineTo(w-p,h-p);c.stroke();c.strokeStyle="#66d9a8";c.lineWidth=2;c.beginPath();vals.forEach((v,i)=>i?c.lineTo(x(i),y(v)):c.moveTo(x(i),y(v)));c.stroke();c.fillStyle="#9aabc2";c.font="12px Arial";c.fillText(fmt(max),p+4,16);c.fillText(fmt(min),p+4,h-5)}
+function render(){if(!data)return;const symbol=el("market").value,m=data.markets[symbol];if(!m)return;el("equity").textContent=fmt(data.equity)+" USD";el("cash").textContent=fmt(data.cash)+" USD";el("pnl").textContent=fmt(data.realized_pnl)+" USD";el("market-count").textContent=String(Object.keys(data.markets).length);el("price").textContent=m.latest_price==null?"—":fmt(m.latest_price,6)+" "+m.quote;el("quantity").textContent=fmt(m.quantity,8);el("win-rate").textContent=m.win_rate==null?"لا توجد صفقات مغلقة":fmt(m.win_rate,1)+"%";el("provider").textContent=m.provider==="binance"?"Binance":"Yahoo Finance";draw(m.prices||[]);
+const sb=el("signals");sb.replaceChildren();(m.signals||[]).forEach(s=>{const tr=document.createElement("tr");[new Date(s.timestamp).toLocaleString("ar"),symbol,s.signal,fmt(s.price,6),s.reason].forEach((v,i)=>{const td=document.createElement("td");td.textContent=v;if(i===2)td.className=s.signal==="BUY"?"buy":s.signal==="SELL"?"sell":"";tr.appendChild(td)});sb.appendChild(tr)});
+const tb=el("trades");tb.replaceChildren();(data.trades||[]).filter(t=>t.symbol===symbol).slice(0,30).forEach(t=>{const tr=document.createElement("tr");[new Date(t.timestamp).toLocaleString("ar"),symbol,t.side==="BUY"?"شراء افتراضي":"بيع افتراضي",fmt(t.price,6),fmt(t.quantity,8),t.pnl==null?"—":fmt(t.pnl)].forEach((v,i)=>{const td=document.createElement("td");td.textContent=v;if(i===2)td.className=t.side==="BUY"?"buy":"sell";tr.appendChild(td)});tb.appendChild(tr)})}
+fetch("./data.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw Error("تعذر تحميل البيانات");return r.json()}).then(d=>{data=d;const sel=el("market");Object.entries(d.markets||{}).forEach(([s,m])=>{const o=document.createElement("option");o.value=s;o.textContent=s+" — "+m.name;sel.appendChild(o)});sel.addEventListener("change",render);if(sel.options.length)render();el("updated").textContent="آخر تحديث: "+new Date(d.updated_at).toLocaleString("ar")}).catch(e=>el("error").textContent=e.message+" — تحقق من نجاح GitHub Actions.");
+window.addEventListener("resize",()=>{if(data)render()});
 })();
-</script>
-</body>
-</html>
+</script></body></html>
