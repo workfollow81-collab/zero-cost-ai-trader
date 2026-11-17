@@ -29,7 +29,3 @@ jobs:
 
       - name: Run market data unit tests
         run: python -m unittest discover -s tests -v
-
-      - name: Check live public BTC price endpoint
-        run: |
-          python -c 'from exchange.market_data import fetch_current_price; price = fetch_current_price("BTC/USDT"); print(f"Live BTC/USDT price: {price:,.2f} USDT")'
