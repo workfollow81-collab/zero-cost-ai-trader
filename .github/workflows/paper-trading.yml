@@ -4,7 +4,7 @@ on:
   # cron-job.org triggers this workflow every 5 minutes.
   workflow_dispatch:
 
-# Prevent overlapping runs from accessing the same cached paper state.
+# Prevent overlapping runs from accessing the same cached paper/MT5 state.
 concurrency:
   group: paper-trading-bot
   cancel-in-progress: false
@@ -16,8 +16,18 @@ permissions:
 
 jobs:
   paper-trading:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # MT5's official Python integration requires the Windows terminal.
+    # Public-repository standard GitHub-hosted Windows runners are free.
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      MT5_LOGIN: ${{ secrets.MT5_LOGIN }}
+      MT5_PASSWORD: ${{ secrets.MT5_PASSWORD }}
+      MT5_SERVER: ${{ secrets.MT5_SERVER }}
+      MT5_DEMO_TRADING_ENABLED: ${{ secrets.MT5_DEMO_TRADING_ENABLED }}
+      MT5_SYMBOL: ${{ secrets.MT5_SYMBOL }}
+      MT5_VOLUME: ${{ secrets.MT5_VOLUME }}
+      MT5_MAX_SPREAD_POINTS: ${{ secrets.MT5_MAX_SPREAD_POINTS }}
     steps:
       - name: Get project files
         uses: actions/checkout@v4
@@ -28,8 +38,8 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
-      # Restore the latest saved virtual portfolio state.
-      - name: Restore paper-trading state
+      # Restore the latest saved virtual portfolio and MT5 duplicate-bar state.
+      - name: Restore trading state
         uses: actions/cache@v4
         with:
           path: data/
@@ -37,11 +47,34 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-paper-state-
 
+      - name: Install MetaTrader 5 terminal (demo mode only)
+        if: ${{ env.MT5_DEMO_TRADING_ENABLED == 'true' }}
+        shell: pwsh
+        run: |
+          $installer = Join-Path $env:RUNNER_TEMP "mt5setup.exe"
+          $uri = "https://download.terminal.free/cdn/web/metaquotes.ltd/mt5/mt5setup.exe?utm_campaign=download&utm_source=www.metatrader5.com"
+          Invoke-WebRequest -Uri $uri -OutFile $installer
+          Start-Process -FilePath $installer -ArgumentList "/auto" -Wait
+          $terminal = Join-Path $env:ProgramFiles "MetaTrader 5\terminal64.exe"
+          if (!(Test-Path $terminal)) {
+            throw "MetaTrader 5 terminal64.exe was not found after installation."
+          }
+          "MT5_TERMINAL_PATH=$terminal" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Install bot dependencies
-        run: python -m pip install --upgrade pip pandas numpy
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip pandas numpy
+          if ($env:MT5_DEMO_TRADING_ENABLED -eq "true") {
+            python -m pip install MetaTrader5
+          }
 
       - name: Run one paper-trading cycle
         run: python main.py --once
+
+      - name: Run MetaQuotes-Demo execution cycle
+        if: ${{ env.MT5_DEMO_TRADING_ENABLED == 'true' }}
+        run: python mt5_demo.py
 
       - name: Export dashboard data
         run: python dashboard/export_public_data.py
