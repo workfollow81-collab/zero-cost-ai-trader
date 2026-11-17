@@ -1,33 +1,49 @@
-"""جلب سعر السوق الحالي من واجهة Binance العامة دون مفتاح API."""
-
+"""Public market data adapters. No exchange account or API key is used."""
 import json
 import math
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
+from config import MARKETS
+
+
+def _get_json(url):
+    request = Request(url, headers={"User-Agent": "zero-cost-paper-trading-bot/1.0"})
+    with urlopen(request, timeout=15) as response:
+        return json.loads(response.read().decode("utf-8"))
+
 
 def fetch_current_price(symbol):
-    """أعد آخر سعر معلن للزوج، أو ارفع خطأ واضحاً دون اختلاق سعر بديل."""
-    market_symbol = symbol.replace("/", "").replace("-", "").upper()
-    if not market_symbol.isalnum():
-        raise ValueError(f"رمز تداول غير صالح: {symbol}")
-
-    url = f"https://data-api.binance.vision/api/v3/ticker/price?symbol={market_symbol}"
-    request = Request(
-        url,
-        headers={"User-Agent": "zero-cost-paper-trading-bot/1.0"},
-    )
-
+    """Return a validated quote; never fabricate a fallback price."""
+    # Legacy-only compatibility for the old BTC unit tests/data adapter.
+    # These symbols are deliberately NOT part of the active MARKETS universe.
+    legacy_crypto = symbol in {"BTC/USDT", "ETH/USDT"}
+    if legacy_crypto:
+        market = {"provider": "binance", "ticker": symbol}
+    else:
+        if symbol not in MARKETS:
+            raise ValueError(f"Unsupported market symbol: {symbol}")
+        market = MARKETS[symbol]
     try:
-        with urlopen(request, timeout=15) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-        price = float(payload["price"])
-    except (URLError, TimeoutError, OSError, ValueError, KeyError, TypeError) as exc:
-        raise RuntimeError(
-            f"تعذر جلب سعر {symbol} من واجهة السوق العامة: {exc}"
-        ) from exc
+        if market["provider"] == "binance":
+            pair = market["ticker"].replace("/", "").upper()
+            payload = _get_json(
+                f"https://data-api.binance.vision/api/v3/ticker/price?symbol={pair}"
+            )
+            price = float(payload["price"])
+        else:
+            # Yahoo's public chart endpoint is unofficial; FX/commodity quotes
+            # may be delayed or indicative and availability is not guaranteed.
+            from urllib.parse import quote
+            ticker = market["ticker"]
+            payload = _get_json(
+                f"https://query1.finance.yahoo.com/v8/finance/chart/{quote(ticker, safe='')}?range=1d&interval=5m"
+            )
+            result = payload["chart"]["result"][0]
+            price = float(result["meta"]["regularMarketPrice"])
+    except (URLError, TimeoutError, OSError, ValueError, KeyError, TypeError, IndexError) as exc:
+        raise RuntimeError(f"Unable to fetch a valid {symbol} quote: {exc}") from exc
 
     if not math.isfinite(price) or price <= 0:
-        raise RuntimeError(f"أعادت واجهة السوق سعراً غير صالح للزوج {symbol}")
-
+        raise RuntimeError(f"Invalid market quote for {symbol}: {price}")
     return price
