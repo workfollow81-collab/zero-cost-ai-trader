@@ -15,12 +15,15 @@ def _get_json(url):
 
 def fetch_current_price(symbol):
     """Return a validated quote; never fabricate a fallback price."""
-    # Keep compatibility with the original BTC/USDT API used by earlier tests.
-    aliases = {"BTC/USDT": "BTCUSDT", "ETH/USDT": "ETHUSDT"}
-    symbol = aliases.get(symbol, symbol)
-    if symbol not in MARKETS:
-        raise ValueError(f"Unsupported market symbol: {symbol}")
-    market = MARKETS[symbol]
+    # Legacy-only compatibility for the old BTC unit tests/data adapter.
+    # These symbols are deliberately NOT part of the active MARKETS universe.
+    legacy_crypto = symbol in {"BTC/USDT", "ETH/USDT"}
+    if legacy_crypto:
+        market = {"provider": "binance", "ticker": symbol}
+    else:
+        if symbol not in MARKETS:
+            raise ValueError(f"Unsupported market symbol: {symbol}")
+        market = MARKETS[symbol]
     try:
         if market["provider"] == "binance":
             pair = market["ticker"].replace("/", "").upper()
