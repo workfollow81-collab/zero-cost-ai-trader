@@ -15,6 +15,9 @@ def _get_json(url):
 
 def fetch_current_price(symbol):
     """Return a validated quote; never fabricate a fallback price."""
+    # Keep compatibility with the original BTC/USDT API used by earlier tests.
+    aliases = {"BTC/USDT": "BTCUSDT", "ETH/USDT": "ETHUSDT"}
+    symbol = aliases.get(symbol, symbol)
     if symbol not in MARKETS:
         raise ValueError(f"Unsupported market symbol: {symbol}")
     market = MARKETS[symbol]
@@ -28,8 +31,8 @@ def fetch_current_price(symbol):
         else:
             # Yahoo's public chart endpoint is unofficial; FX/commodity quotes
             # may be delayed or indicative and availability is not guaranteed.
-            ticker = market["ticker"]
             from urllib.parse import quote
+            ticker = market["ticker"]
             payload = _get_json(
                 f"https://query1.finance.yahoo.com/v8/finance/chart/{quote(ticker, safe='')}?range=1d&interval=5m"
             )
