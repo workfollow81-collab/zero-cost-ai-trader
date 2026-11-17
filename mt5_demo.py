@@ -1,7 +1,7 @@
 """Demo-only MetaTrader 5 execution bridge.
 
 This module refuses to trade unless explicitly enabled and the connected account
-is confirmed by MetaTrader as a MetaQuotes-Demo demo account.
+is confirmed by MetaTrader as a demo account on the exact configured demo server.
 """
 import json
 import math
@@ -38,8 +38,8 @@ def required_environment():
         )
     if not login.isdigit():
         raise RuntimeError("MT5_LOGIN must contain the numeric demo account number.")
-    if "metaquotes-demo" not in server.lower():
-        raise RuntimeError("Safety stop: MT5_SERVER must identify MetaQuotes-Demo.")
+    if "demo" not in server.lower():
+        raise RuntimeError("Safety stop: MT5_SERVER must identify a demo server.")
     return int(login), password, server
 
 
@@ -147,11 +147,11 @@ def run():
         if account is None or terminal is None:
             raise RuntimeError(f"Could not read MT5 account/terminal information: {mt5.last_error()}")
 
-        # Hard safety interlock: both the account mode and server name must be demo.
+        # Hard safety interlock: account mode must be demo and server must exactly match the configured demo server.
         if int(account.trade_mode) != int(mt5.ACCOUNT_TRADE_MODE_DEMO):
             raise RuntimeError("Safety stop: connected MT5 account is not a demo account.")
-        if "metaquotes-demo" not in str(account.server).lower():
-            raise RuntimeError("Safety stop: connected server is not MetaQuotes-Demo.")
+        if str(account.server).strip().casefold() != server.strip().casefold():
+            raise RuntimeError("Safety stop: connected MT5 server does not exactly match MT5_SERVER.")
         if int(account.login) != login:
             raise RuntimeError("Safety stop: connected MT5 account number does not match MT5_LOGIN.")
         if not bool(terminal.trade_allowed) or not bool(account.trade_allowed):
