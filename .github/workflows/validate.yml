@@ -1,0 +1,24 @@
+name: Validate Multi-Asset Bot
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependencies
+        run: python -m pip install --upgrade pip pandas
+      - name: Compile Python modules
+        run: python -m compileall -q .
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
