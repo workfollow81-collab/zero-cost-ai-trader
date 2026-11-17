@@ -14,7 +14,9 @@ class MultiAssetTests(unittest.TestCase):
     def test_expected_markets_are_configured(self):
         self.assertIn("XAUUSD", SYMBOLS)
         self.assertIn("EURUSD", SYMBOLS)
-        self.assertIn("BTCUSDT", SYMBOLS)
+        self.assertIn("GBPUSD", SYMBOLS)
+        self.assertNotIn("BTCUSDT", SYMBOLS)
+        self.assertNotIn("ETHUSDT", SYMBOLS)
         self.assertEqual(set(SYMBOLS), set(MARKETS))
 
     def test_market_price_histories_are_isolated_by_symbol(self):
