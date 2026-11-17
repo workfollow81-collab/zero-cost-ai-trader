@@ -1,11 +1,10 @@
 name: Paper Trading Bot
 
 on:
-  schedule:
-    - cron: "*/5 * * * *"
+  # cron-job.org triggers this workflow every 5 minutes.
   workflow_dispatch:
 
-# امنع تشغيل نسختين معاً حتى لا تتعارض قاعدة البيانات المحفوظة.
+# Prevent overlapping runs from accessing the same cached paper state.
 concurrency:
   group: paper-trading-bot
   cancel-in-progress: false
@@ -29,8 +28,7 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
-      # كل تشغيل يسترجع أحدث نسخة محفوظة من قاعدة بيانات المحاكاة.
-      # يُنشأ مفتاح جديد في كل مرة كي تُحفظ الحالة المحدّثة كنسخة جديدة.
+      # Restore the latest saved virtual portfolio state.
       - name: Restore paper-trading state
         uses: actions/cache@v4
         with:
