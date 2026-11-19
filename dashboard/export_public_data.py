@@ -32,6 +32,8 @@ def main():
             ).fetchall()
             prices = [{"timestamp": row["timestamp"], "price": float(row["price"])}
                       for row in reversed(price_rows)]
+            if prices:
+                latest_price = prices[-1]["price"]
             trade_columns = {row["name"] for row in con.execute("PRAGMA table_info(trades)")}
             pnl_select = "pnl" if "pnl" in trade_columns else "NULL AS pnl"
             trade_rows = con.execute(
