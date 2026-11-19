@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from config import DB_PATH, STARTING_CASH, SYMBOL
+from strategies.portfolio import STRATEGIES
 
 OUTPUT = ROOT / "docs" / "data.json"
 STATE_PREFIX = SYMBOL.replace("/", "")
@@ -20,6 +21,7 @@ def main():
     cash, quantity = float(STARTING_CASH), 0.0
     latest_price = None
     realized_pnl = 0.0
+    strategy_rows = []
 
     if DB_PATH.exists():
         with sqlite3.connect(DB_PATH) as con:
@@ -57,6 +59,52 @@ def main():
                 "price": float(row["price"]), "reason": row["reason"] or "",
             } for row in signal_rows]
 
+            strategy_state = {}
+            if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='strategy_state'").fetchone():
+                strategy_state = {(row["strategy_id"], row["key"]): float(row["value"])
+                                  for row in con.execute("SELECT strategy_id, key, value FROM strategy_state")}
+            strategy_status = {}
+            if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='strategy_status'").fetchone():
+                strategy_status = {row["strategy_id"]: dict(row)
+                                   for row in con.execute("SELECT * FROM strategy_status")}
+            strategy_trades = []
+            if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='strategy_trades'").fetchone():
+                strategy_trades = [dict(row) for row in con.execute(
+                    "SELECT strategy_id, timestamp, symbol, side, price, quantity, cash_after, pnl, note "
+                    "FROM strategy_trades ORDER BY id DESC LIMIT 300")]
+
+            for definition in STRATEGIES:
+                sid = definition["id"]
+                closed = [t for t in strategy_trades if t["strategy_id"] == sid
+                          and t["side"] == "SELL" and t["pnl"] is not None]
+                wins = sum(1 for t in closed if float(t["pnl"]) > 0)
+                losses = sum(1 for t in closed if float(t["pnl"]) < 0)
+                strat_cash = strategy_state.get((sid, "cash"), float(STARTING_CASH))
+                strat_qty = strategy_state.get((sid, "quantity"), 0.0)
+                strat_pnl = sum(float(t["pnl"]) for t in closed)
+                status = strategy_status.get(sid, {})
+                recent = [t for t in strategy_trades if t["strategy_id"] == sid][:10]
+                strategy_rows.append({
+                    **definition,
+                    "signal": status.get("signal", "HOLD"),
+                    "reason": status.get("reason", "بانتظار أول دورة تحليل"),
+                    "last_update": status.get("timestamp"),
+                    "cash": strat_cash,
+                    "quantity": strat_qty,
+                    "equity": strat_cash + strat_qty * (latest_price or 0),
+                    "realized_pnl": strat_pnl,
+                    "closed_trades": len(closed),
+                    "wins": wins,
+                    "losses": losses,
+                    "win_rate": wins / len(closed) * 100 if closed else None,
+                    "trades": [{
+                        "timestamp": t["timestamp"], "side": t["side"],
+                        "price": float(t["price"]), "quantity": float(t["quantity"]),
+                        "pnl": None if t["pnl"] is None else float(t["pnl"]),
+                        "note": t["note"] or "",
+                    } for t in recent],
+                })
+
     if prices:
         latest_price = prices[-1]["price"]
     equity = cash + quantity * latest_price if latest_price is not None else cash
@@ -72,10 +120,12 @@ def main():
         "closed_trades": len(closed), "winning_trades": wins,
         "losing_trades": sum(1 for trade in closed if trade["pnl"] < 0),
         "win_rate": win_rate, "prices": prices, "trades": trades,
-        "signals": signals,
+        "signals": signals, "strategies": strategy_rows,
     }
     OUTPUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"Dashboard data exported for {SYMBOL}: {len(prices)} prices, {len(signals)} signals, {len(trades)} paper trades.")
+    print(f"Dashboard data exported for {SYMBOL}: {len(prices)} prices, "
+          f"{len(signals)} signals, {len(trades)} base paper trades, "
+          f"{len(strategy_rows)} strategy portfolios.")
 
 
 if __name__ == "__main__":
