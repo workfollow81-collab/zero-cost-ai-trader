@@ -5,6 +5,7 @@ from datetime import datetime
 import pandas as pd
 
 from config import SYMBOL, STARTING_CASH, TRADE_FRACTION, LOOP_SECONDS
+import database.db as db
 from database.db import (
     init_db, save_price, save_signal, save_trade, load_rows, get_state, save_state,
 )
@@ -62,7 +63,7 @@ def run_cycle():
     save_state(f"{STATE_PREFIX}_quantity", broker.quantity)
 
     # Run six isolated strategy portfolios; these never touch the MT5 bridge.
-    run_strategy_portfolios(frame, price, now, SYMBOL, __import__("database.db", fromlist=["db"]), STARTING_CASH, TRADE_FRACTION)
+    run_strategy_portfolios(frame, price, now, SYMBOL, db, STARTING_CASH, TRADE_FRACTION)
 
     equity = broker.cash + broker.quantity * price
     print(
