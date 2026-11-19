@@ -12,6 +12,7 @@ from analysis.indicators import add_indicators
 from strategies.basic import get_signal
 from exchange.paper_broker import PaperBroker
 from exchange.market_data import fetch_current_price
+from strategies.portfolio import run_strategy_portfolios
 
 # Keep each market's virtual portfolio separate from any older BTC/USDT state.
 STATE_PREFIX = SYMBOL.replace("/", "")
@@ -59,6 +60,9 @@ def run_cycle():
 
     save_state(f"{STATE_PREFIX}_cash", broker.cash)
     save_state(f"{STATE_PREFIX}_quantity", broker.quantity)
+
+    # Run six isolated strategy portfolios; these never touch the MT5 bridge.
+    run_strategy_portfolios(frame, price, now, SYMBOL, __import__("database.db", fromlist=["db"]), STARTING_CASH, TRADE_FRACTION)
 
     equity = broker.cash + broker.quantity * price
     print(
