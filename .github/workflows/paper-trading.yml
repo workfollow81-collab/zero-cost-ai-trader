@@ -96,6 +96,11 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
+      - name: Run MetaQuotes-Demo execution cycle
+        if: ${{ env.MT5_DEMO_TRADING_ENABLED == 'true' }}
+        run: python mt5_demo.py
+
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
