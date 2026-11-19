@@ -73,13 +73,13 @@ jobs:
           if ($env:MT5_DEMO_TRADING_ENABLED -eq "true") {
             python -m pip install MetaTrader5
           }
+          python -m pip install pytest
+
+      - name: Run automated tests
+        run: python -m pytest -q
 
       - name: Run one paper-trading cycle
         run: python main.py --once
-
-      - name: Run MetaQuotes-Demo execution cycle
-        if: ${{ env.MT5_DEMO_TRADING_ENABLED == 'true' }}
-        run: python mt5_demo.py
 
       - name: Export dashboard data
         run: python dashboard/export_public_data.py
