@@ -73,7 +73,7 @@ def main():
             if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='strategy_trades'").fetchone():
                 strategy_trades = [dict(row) for row in con.execute(
                     "SELECT strategy_id, timestamp, symbol, side, price, quantity, cash_after, pnl, note "
-                    "FROM strategy_trades ORDER BY id DESC LIMIT 300")]
+                    "FROM strategy_trades ORDER BY id DESC")]
 
             for definition in STRATEGIES:
                 sid = definition["id"]
