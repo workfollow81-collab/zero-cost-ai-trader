@@ -75,11 +75,12 @@ def normalized_volume(info):
     minimum = float(info.volume_min)
     maximum = float(info.volume_max)
     step = float(info.volume_step)
-    if step <= 0 or requested < minimum:
+    if step <= 0 or requested < minimum or requested > maximum:
         raise RuntimeError(
-            f"Configured volume {requested} is below the symbol minimum {minimum}."
+            f"Configured volume {requested} is outside the symbol limits "
+            f"({minimum} to {maximum})."
         )
-    volume = math.floor((min(requested, maximum) + 1e-12) / step) * step
+    volume = math.floor((requested + 1e-12) / step) * step
     if volume < minimum:
         raise RuntimeError("Could not calculate a valid order volume.")
     decimals = max(0, min(8, len(str(step).split(".")[-1].rstrip("0"))))
