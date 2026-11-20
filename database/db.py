@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import contextmanager
 from config import DB_PATH, DATA_DIR
 
 
@@ -9,8 +10,22 @@ def connect():
     return con
 
 
+@contextmanager
+def db_connection():
+    """Open a connection and always commit/rollback and close it."""
+    con = connect()
+    try:
+        yield con
+        con.commit()
+    except Exception:
+        con.rollback()
+        raise
+    finally:
+        con.close()
+
+
 def init_db():
-    with connect() as con:
+    with db_connection() as con:
         con.execute("CREATE TABLE IF NOT EXISTS prices (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT NOT NULL, symbol TEXT NOT NULL, price REAL NOT NULL)")
         con.execute("CREATE TABLE IF NOT EXISTS trades (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT NOT NULL, symbol TEXT NOT NULL, side TEXT NOT NULL, price REAL NOT NULL, quantity REAL NOT NULL, cash_after REAL NOT NULL, note TEXT, pnl REAL)")
         con.execute("CREATE TABLE IF NOT EXISTS bot_state (key TEXT PRIMARY KEY, value REAL NOT NULL)")
@@ -32,18 +47,18 @@ def init_db():
 
 
 def save_price(timestamp, symbol, price):
-    with connect() as con:
+    with db_connection() as con:
         con.execute("INSERT INTO prices(timestamp, symbol, price) VALUES (?, ?, ?)", (timestamp, symbol, float(price)))
 
 
 def save_signal(timestamp, symbol, signal, price, reason=""):
-    with connect() as con:
+    with db_connection() as con:
         con.execute("INSERT INTO signals(timestamp, symbol, signal, price, reason) VALUES (?, ?, ?, ?, ?)",
                     (timestamp, symbol, signal, float(price), reason))
 
 
 def save_trade(timestamp, symbol, side, price, quantity, cash_after, note="", pnl=None):
-    with connect() as con:
+    with db_connection() as con:
         con.execute("INSERT INTO trades(timestamp, symbol, side, price, quantity, cash_after, note, pnl) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     (timestamp, symbol, side, float(price), float(quantity), float(cash_after), note,
                      None if pnl is None else float(pnl)))
@@ -52,7 +67,7 @@ def save_trade(timestamp, symbol, side, price, quantity, cash_after, note="", pn
 def load_rows(table, limit=500, symbol=None):
     if table not in {"prices", "trades", "signals"}:
         raise ValueError("Unsupported table")
-    with connect() as con:
+    with db_connection() as con:
         if symbol is None:
             rows = con.execute(f"SELECT * FROM {table} ORDER BY id DESC LIMIT ?", (int(limit),)).fetchall()
         else:
@@ -62,34 +77,34 @@ def load_rows(table, limit=500, symbol=None):
 
 
 def get_state(key, default):
-    with connect() as con:
+    with db_connection() as con:
         row = con.execute("SELECT value FROM bot_state WHERE key = ?", (key,)).fetchone()
         return float(row["value"]) if row else float(default)
 
 
 def save_state(key, value):
-    with connect() as con:
+    with db_connection() as con:
         con.execute("INSERT INTO bot_state(key, value) VALUES (?, ?) "
                     "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
                     (key, float(value)))
 
 
 def get_strategy_state(strategy_id, key, default=0.0):
-    with connect() as con:
+    with db_connection() as con:
         row = con.execute("SELECT value FROM strategy_state WHERE strategy_id = ? AND key = ?",
                           (strategy_id, key)).fetchone()
         return float(row["value"]) if row else float(default)
 
 
 def save_strategy_state(strategy_id, key, value):
-    with connect() as con:
+    with db_connection() as con:
         con.execute("INSERT INTO strategy_state(strategy_id, key, value) VALUES (?, ?, ?) "
                     "ON CONFLICT(strategy_id, key) DO UPDATE SET value = excluded.value",
                     (strategy_id, key, float(value)))
 
 
 def save_strategy_trade(strategy_id, timestamp, symbol, side, price, quantity, cash_after, pnl=None, note=""):
-    with connect() as con:
+    with db_connection() as con:
         con.execute("""INSERT INTO strategy_trades
             (strategy_id, timestamp, symbol, side, price, quantity, cash_after, pnl, note)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
@@ -98,7 +113,7 @@ def save_strategy_trade(strategy_id, timestamp, symbol, side, price, quantity, c
 
 
 def save_strategy_status(strategy_id, signal, reason, timestamp):
-    with connect() as con:
+    with db_connection() as con:
         con.execute("""INSERT INTO strategy_status(strategy_id, signal, reason, timestamp)
             VALUES (?, ?, ?, ?) ON CONFLICT(strategy_id) DO UPDATE SET
             signal=excluded.signal, reason=excluded.reason, timestamp=excluded.timestamp""",
