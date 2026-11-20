@@ -1,4 +1,5 @@
 """Independent, price-only paper portfolios for dashboard strategy comparison."""
+import math
 import pandas as pd
 
 STRATEGIES = [
@@ -9,6 +10,17 @@ STRATEGIES = [
     {"id": "donchian", "name": "Donchian Breakout", "description": "اختراق أعلى/أدنى نطاق سعري سابق"},
     {"id": "ema_momentum", "name": "EMA Momentum", "description": "اتجاه EMA 12/26 مع تأكيد السعر"},
 ]
+
+ATR_PERIOD = 14
+STOP_ATR_MULTIPLIER = 1.5
+TAKE_PROFIT_ATR_MULTIPLIER = 3.0
+
+
+def _price_atr(frame):
+    """ATR proxy for this price-only feed: 14-period mean absolute price change."""
+    changes = frame["price"].astype(float).diff().abs()
+    value = changes.rolling(ATR_PERIOD, min_periods=ATR_PERIOD).mean().iloc[-1]
+    return float(value) if pd.notna(value) and math.isfinite(float(value)) else None
 
 
 def _features(frame):
@@ -91,7 +103,8 @@ def generate_signals(frame, in_positions=None):
 
 
 def run_strategy_portfolios(frame, price, timestamp, symbol, db, starting_cash, trade_fraction):
-    """Advance each isolated paper portfolio once per market-price observation."""
+    """Advance isolated paper portfolios with independent ATR-based SL/TP."""
+    atr = _price_atr(frame) if len(frame) >= 30 else None
     statuses = generate_signals(frame, {
         item["id"]: db.get_strategy_state(item["id"], "quantity", 0.0) > 0
         for item in STRATEGIES
@@ -102,21 +115,55 @@ def run_strategy_portfolios(frame, price, timestamp, symbol, db, starting_cash, 
         cash = db.get_strategy_state(sid, "cash", starting_cash)
         quantity = db.get_strategy_state(sid, "quantity", 0.0)
         cost = db.get_strategy_state(sid, "position_cost", 0.0)
+        stop_loss = db.get_strategy_state(sid, "stop_loss", 0.0)
+        take_profit = db.get_strategy_state(sid, "take_profit", 0.0)
+
+        # Protect legacy open positions that predate persisted SL/TP levels.
+        if quantity > 0 and (stop_loss <= 0 or take_profit <= 0) and atr and atr > 0:
+            entry = cost / quantity if quantity else price
+            stop_loss = entry - STOP_ATR_MULTIPLIER * atr
+            take_profit = entry + TAKE_PROFIT_ATR_MULTIPLIER * atr
+            db.save_strategy_state(sid, "stop_loss", stop_loss)
+            db.save_strategy_state(sid, "take_profit", take_profit)
+
+        exit_reason = None
+        if quantity > 0 and stop_loss > 0 and price <= stop_loss:
+            exit_reason = "إغلاق بوقف الخسارة ATR (1.5×)"
+        elif quantity > 0 and take_profit > 0 and price >= take_profit:
+            exit_reason = "إغلاق بجني الأرباح ATR (3×)"
+        elif signal == "SELL" and quantity > 0:
+            exit_reason = reason
+
         if signal == "BUY" and quantity <= 0 and cash > 0 and price > 0:
-            budget = cash * trade_fraction
-            qty = budget / price
-            cash -= budget
-            quantity += qty
-            cost = budget
-            db.save_strategy_trade(sid, timestamp, symbol, "BUY", price, qty, cash, None, reason)
-        elif signal == "SELL" and quantity > 0 and price > 0:
+            if not atr or atr <= 0:
+                reason = "تم تجاهل الدخول لعدم توفر ATR صالح لحساب وقف الخسارة"
+            else:
+                budget = cash * trade_fraction
+                qty = budget / price
+                stop_loss = price - STOP_ATR_MULTIPLIER * atr
+                take_profit = price + TAKE_PROFIT_ATR_MULTIPLIER * atr
+                cash -= budget
+                quantity = qty
+                cost = budget
+                db.save_strategy_trade(sid, timestamp, symbol, "BUY", price, qty, cash, None,
+                                       f"{reason} | SL={stop_loss:.5f} | TP={take_profit:.5f}")
+                db.save_strategy_state(sid, "stop_loss", stop_loss)
+                db.save_strategy_state(sid, "take_profit", take_profit)
+        elif exit_reason and quantity > 0 and price > 0:
             qty = quantity
             pnl = qty * price - cost
             cash += qty * price
-            db.save_strategy_trade(sid, timestamp, symbol, "SELL", price, qty, cash, pnl, reason)
+            db.save_strategy_trade(sid, timestamp, symbol, "SELL", price, qty, cash, pnl, exit_reason)
             quantity = 0.0
             cost = 0.0
+            stop_loss = 0.0
+            take_profit = 0.0
+            signal = "SELL"
+            reason = exit_reason
+
         db.save_strategy_state(sid, "cash", cash)
         db.save_strategy_state(sid, "quantity", quantity)
         db.save_strategy_state(sid, "position_cost", cost)
+        db.save_strategy_state(sid, "stop_loss", stop_loss)
+        db.save_strategy_state(sid, "take_profit", take_profit)
         db.save_strategy_status(sid, signal, reason, timestamp)
