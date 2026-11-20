@@ -93,6 +93,8 @@ def main():
                     "last_update": status.get("timestamp"),
                     "cash": strat_cash,
                     "quantity": strat_qty,
+                    "stop_loss": strategy_state.get((sid, "stop_loss"), 0.0) or None,
+                    "take_profit": strategy_state.get((sid, "take_profit"), 0.0) or None,
                     "equity": strat_cash + strat_qty * (latest_price or 0),
                     "realized_pnl": strat_pnl,
                     "closed_trades": len(closed),
