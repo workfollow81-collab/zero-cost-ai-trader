@@ -30,6 +30,8 @@ jobs:
       MT5_SYMBOL: ${{ secrets.MT5_SYMBOL }}
       MT5_VOLUME: "0.1"
       MT5_MAX_SPREAD_POINTS: ${{ secrets.MT5_MAX_SPREAD_POINTS }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
     steps:
       - name: Get project files
         uses: actions/checkout@v4
