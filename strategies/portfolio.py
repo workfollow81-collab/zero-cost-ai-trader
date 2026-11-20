@@ -136,6 +136,7 @@ def run_strategy_portfolios(frame, price, timestamp, symbol, db, starting_cash, 
 
         if signal == "BUY" and quantity <= 0 and cash > 0 and price > 0:
             if not atr or atr <= 0:
+                signal = "HOLD"
                 reason = "تم تجاهل الدخول لعدم توفر ATR صالح لحساب وقف الخسارة"
             else:
                 budget = cash * trade_fraction
