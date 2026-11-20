@@ -14,12 +14,16 @@ class PerformanceTrackingTests(unittest.TestCase):
             data_dir = Path(tmp) / "data"
             data_dir.mkdir()
             # Simulate a database created by the earlier bot version.
-            with sqlite3.connect(db_path) as con:
-                con.execute(
+            legacy_con = sqlite3.connect(db_path)
+            try:
+                legacy_con.execute(
                     "CREATE TABLE trades (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                     "timestamp TEXT NOT NULL, symbol TEXT NOT NULL, side TEXT NOT NULL, "
                     "price REAL NOT NULL, quantity REAL NOT NULL, cash_after REAL NOT NULL, note TEXT)"
                 )
+                legacy_con.commit()
+            finally:
+                legacy_con.close()
 
             with patch.object(db, "DB_PATH", db_path), patch.object(db, "DATA_DIR", data_dir):
                 db.init_db()
