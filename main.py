@@ -14,6 +14,7 @@ from strategies.basic import get_signal
 from exchange.paper_broker import PaperBroker
 from exchange.market_data import fetch_current_price
 from strategies.portfolio import run_strategy_portfolios
+from telegram_notify import send_pending_strategy_reports
 
 # Keep each market's virtual portfolio separate from any older BTC/USDT state.
 STATE_PREFIX = SYMBOL.replace("/", "")
@@ -64,6 +65,7 @@ def run_cycle():
 
     # Run six isolated strategy portfolios; these never touch the MT5 bridge.
     run_strategy_portfolios(frame, price, now, SYMBOL, db, STARTING_CASH, TRADE_FRACTION)
+    send_pending_strategy_reports()
 
     equity = broker.cash + broker.quantity * price
     print(
