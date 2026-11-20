@@ -28,7 +28,7 @@ jobs:
       MT5_SERVER: ${{ secrets.MT5_SERVER }}
       MT5_DEMO_TRADING_ENABLED: ${{ secrets.MT5_DEMO_TRADING_ENABLED }}
       MT5_SYMBOL: ${{ secrets.MT5_SYMBOL }}
-      MT5_VOLUME: ${{ secrets.MT5_VOLUME }}
+      MT5_VOLUME: "0.1"
       MT5_MAX_SPREAD_POINTS: ${{ secrets.MT5_MAX_SPREAD_POINTS }}
     steps:
       - name: Get project files
