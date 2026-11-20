@@ -23,7 +23,8 @@ class PerformanceTrackingTests(unittest.TestCase):
 
             with patch.object(db, "DB_PATH", db_path), patch.object(db, "DATA_DIR", data_dir):
                 db.init_db()
-                columns = {row["name"] for row in db.connect().execute("PRAGMA table_info(trades)")}
+                with db.db_connection() as con:
+                    columns = {row["name"] for row in con.execute("PRAGMA table_info(trades)")}
                 self.assertIn("pnl", columns)
 
                 db.save_signal("2026-11-16T20:00:00+00:00", "BTC/USDT", "HOLD", 65000, "no signal")
