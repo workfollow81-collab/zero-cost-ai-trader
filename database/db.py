@@ -44,6 +44,9 @@ def init_db():
         con.execute("""CREATE TABLE IF NOT EXISTS strategy_status (
             strategy_id TEXT PRIMARY KEY, signal TEXT NOT NULL,
             reason TEXT NOT NULL, timestamp TEXT NOT NULL)""")
+        columns = {row["name"] for row in con.execute("PRAGMA table_info(strategy_trades)")}
+        if "notified" not in columns:
+            con.execute("ALTER TABLE strategy_trades ADD COLUMN notified INTEGER NOT NULL DEFAULT 1")
 
 
 def save_price(timestamp, symbol, price):
@@ -105,11 +108,29 @@ def save_strategy_state(strategy_id, key, value):
 
 def save_strategy_trade(strategy_id, timestamp, symbol, side, price, quantity, cash_after, pnl=None, note=""):
     with db_connection() as con:
-        con.execute("""INSERT INTO strategy_trades
-            (strategy_id, timestamp, symbol, side, price, quantity, cash_after, pnl, note)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        cursor = con.execute("""INSERT INTO strategy_trades
+            (strategy_id, timestamp, symbol, side, price, quantity, cash_after, pnl, note, notified)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (strategy_id, timestamp, symbol, side, float(price), float(quantity),
-             float(cash_after), None if pnl is None else float(pnl), note))
+             float(cash_after), None if pnl is None else float(pnl), note,
+             0 if side == "SELL" else 1))
+        return int(cursor.lastrowid)
+
+
+def load_pending_strategy_notifications():
+    with db_connection() as con:
+        rows = con.execute("""SELECT s.*,
+            (SELECT b.price FROM strategy_trades b WHERE b.strategy_id=s.strategy_id AND b.side='BUY' AND b.id<s.id ORDER BY b.id DESC LIMIT 1) AS entry_price,
+            (SELECT b.note FROM strategy_trades b WHERE b.strategy_id=s.strategy_id AND b.side='BUY' AND b.id<s.id ORDER BY b.id DESC LIMIT 1) AS entry_note,
+            (SELECT COUNT(*) FROM strategy_trades x WHERE x.strategy_id=s.strategy_id AND x.side='SELL' AND x.pnl IS NOT NULL AND x.id<s.id) AS prior_closed,
+            (SELECT COUNT(*) FROM strategy_trades x WHERE x.strategy_id=s.strategy_id AND x.side='SELL' AND x.pnl>0 AND x.id<s.id) AS prior_wins
+            FROM strategy_trades s WHERE s.side='SELL' AND s.notified=0 ORDER BY s.id""").fetchall()
+        return [dict(row) for row in rows]
+
+
+def mark_strategy_trade_notified(trade_id):
+    with db_connection() as con:
+        con.execute("UPDATE strategy_trades SET notified=1 WHERE id=? AND side='SELL'", (int(trade_id),))
 
 
 def save_strategy_status(strategy_id, signal, reason, timestamp):
