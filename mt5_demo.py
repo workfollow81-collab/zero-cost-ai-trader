@@ -19,7 +19,7 @@ from strategies.basic import get_signal
 MAGIC = 261117
 STATE_FILE = Path("data/mt5_demo_state.json")
 DEFAULT_SYMBOL = "EURUSD"
-DEFAULT_VOLUME = 0.01
+DEFAULT_VOLUME = 0.1
 MAX_DAILY_LOSS_PCT = 2.0
 DEFAULT_MAX_SPREAD_POINTS = 30
 
