@@ -1,7 +1,7 @@
 import unittest
 import pandas as pd
 
-from strategies.portfolio import STRATEGIES, generate_signals
+from strategies.portfolio import (\n    ATR_PERIOD, STOP_ATR_MULTIPLIER, TAKE_PROFIT_ATR_MULTIPLIER,\n    STRATEGIES, _price_atr, generate_signals,\n)
 
 
 class StrategyPortfolioTests(unittest.TestCase):
